@@ -1,0 +1,50 @@
+volumes:
+  nextcloud:
+  db:
+  document_data:
+  document_log:
+
+
+services:
+  db:
+    image: mariadb:10.6
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=user
+      - MYSQL_PASSWORD=user
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
+  nextcloud:
+    image: nextcloud
+    restart: always
+    ports:
+      - 8081:80
+    links:
+      - db
+    volumes:
+      - nextcloud:/var/www/html
+
+    environment:
+      - MYSQL_PASSWORD=user
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
+      - NEXTCLOUD_ADMIN_USER=user
+      - NEXTCLOUD_ADMIN_PASSWORD=pIBRAHIMAassw&$*ordrghiudgh54
+      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud
+  onlyoffice:
+    image: onlyoffice/documentserver
+    restart: always
+    links:
+      - nextcloud
+    ports:
+      - 8082:80
+    environment:
+      - JWT_SECRET=secret
+    volumes:
+      - document_data:/var/www/onlyoffice/Data
+      - document_log:/var/log/onlyoffice
