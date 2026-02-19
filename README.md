@@ -58,6 +58,22 @@ On cree le dashboard avec prometheus.
 
 ## NextCloud
 * 11033
+
+
+à noter, il faut generer le token d'abord avant de l'ancer l'exporteur
+
+à executer au sein du container de nextcloud, avec la commande :
+``` bash
+ docker container exec -u www-data -it IDCONTAINER bash 
+# Generate random value (for example using openssl)
+TOKEN=$(openssl rand -hex 32)
+# Set token (using the occ console application)
+occ config:app:set serverinfo token --value "$TOKEN"
+``` 
+![alt text](image.png)
+
+
+
 ### Configuration Trusted_Domains pour nextcloud
 
 On a mis  le nexcloud dans le fichier config/config.php de nextcloud

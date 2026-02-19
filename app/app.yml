@@ -1,7 +1,8 @@
 services:
+
   db:
     image: mariadb:10.6
-    restart: always
+    # restart: always
     command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
     volumes:
       - db:/var/lib/mysql
@@ -17,8 +18,8 @@ services:
         parallelism: 1
         delay: 10s
         failure_action: rollback
-      restart_policy:
-        condition: on-failure
+      # restart_policy:
+      #   condition: on-failure
         max_attempts: 3
       placement:
         preferences:
@@ -32,7 +33,6 @@ services:
       retries: 3
     networks:
     - db_network
-    - monitoring
     - lb_network
 
 
@@ -90,7 +90,6 @@ services:
       - db_network
       - nextonly_network
       - lb_network
-      - monitoring
 
 
   onlyoffice:
@@ -135,7 +134,6 @@ services:
     networks:
       - nextonly_network
       - lb_network
-      - monitoring
   
   redis:
     image: redis:alpine
@@ -151,8 +149,6 @@ networks:
     driver: overlay
   nextonly_network:
     driver: overlay
-  # network à ajouter 
-  monitoring:
 
 volumes:
   nextcloud:

@@ -6,7 +6,7 @@ services:
       mode: global
 
     networks:
-      - monitoring
+      - lb_network
 
     volumes:
       - /proc:/host/proc:ro
@@ -21,18 +21,18 @@ services:
     image: "xperimental/nextcloud-exporter"
     security_opt:
       - no-new-privileges:true
-    ports:
-      - 9205:9205
+    # ports:
+    #   - 9205:9205
     cap_add:
       - MKNOD
     environment:
-      - NEXTCLOUD_SERVER=http://nextcloud:80
-      - NEXTCLOUD_AUTH_TOKEN=a2bd0bce5d1f267a83764dbef0c80293890b5fd63549dee2086665e65a1ccdff
+      - NEXTCLOUD_SERVER=http://nextcloud
+      - NEXTCLOUD_AUTH_TOKEN=8bcfeea89ee060403ff0ad325896b0d05a255efd7265076ca3393161f29ed085
       - NEXTCLOUD_LISTEN_ADDRESS=:9205
       - NEXTCLOUD_TLS_SKIP_VERIFY=false
 
     networks:
-      - monitoring
+      - lb_network
 
   mysqld-exporter:
     image: prom/mysqld-exporter:latest
@@ -40,23 +40,23 @@ services:
       --mysqld.address=db:3306 
       --mysqld.username=root 
     environment: 
-      - MYSQLD_EXPORTER_PASSWORD=user
+      - MYSQLD_EXPORTER_PASSWORD=root
     ports:
       - 9104:9104
     networks:
-      - monitoring
+      - lb_network
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
-    ports:
-    - 8081:8080
+    # ports:
+    # - 8081:8080
     volumes:
     - /:/rootfs:ro
     - /var/run:/var/run:rw
     - /sys:/sys:ro
     - /var/lib/docker/:/var/lib/docker:ro
     networks:
-      - monitoring
+      - lb_network
     
   prometheus:
     image: prom/prometheus:main-distroless
@@ -69,7 +69,7 @@ services:
         target: '/prometheus.yaml'
 
     networks:
-      - monitoring
+      - lb_network
 
     ports:
       - '9090:9090'
@@ -85,7 +85,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - monitoring
+      - lb_network
 
 
 configs:
@@ -94,7 +94,8 @@ configs:
 
 
 networks:
-  monitoring:
+  lb_network:
+    external: true
 
 
 volumes:
