@@ -5,7 +5,7 @@ services:
     environment:
       - XTRABACKUP_PASSWORD=xtrabackup_secret
       - SYSTEM_PASSWORD=xtrabackup_secret
-      - MYSQL_ROOT_PASSWORD=user
+      - MYSQL_ROOT_PASSWORD=root
       - MYSQL_PASSWORD=user
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
@@ -31,7 +31,7 @@ services:
       - CLUSTER_NAME=nextcloud_cluster
       - GCOMM_MINIMUM=1
       - HEALTHY_WHILE_BOOTING=1
-      - MYSQL_ROOT_PASSWORD=user
+      - MYSQL_ROOT_PASSWORD=root
       - SKIP_UPGRADES=1
       
     volumes:
