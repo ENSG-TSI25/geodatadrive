@@ -1,44 +1,67 @@
 services:
-  db:
-    image: mariadb:10.6
-    restart: always
-    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
-    volumes:
-      - db:/var/lib/mysql
+  seed:
+    image: colinmollenhour/mariadb-galera-swarm
+    command: seed
     environment:
+      - XTRABACKUP_PASSWORD=xtrabackup_secret
+      - SYSTEM_PASSWORD=xtrabackup_secret
       - MYSQL_ROOT_PASSWORD=user
       - MYSQL_PASSWORD=user
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
+      - CLUSTER_NAME=nextcloud_cluster
+    volumes:
+      - db:/var/lib/mysql
+    networks:
+      - db_network
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: none
+
+  db:
+    image: colinmollenhour/mariadb-galera-swarm
+    command: node tasks.cloud_seed,tasks.cloud_db
+    environment:
+      - XTRABACKUP_PASSWORD=xtrabackup_secret
+      - SYSTEM_PASSWORD=xtrabackup_secret
+      - CLUSTER_NAME=nextcloud_cluster
+      - GCOMM_MINIMUM=1
+      - HEALTHY_WHILE_BOOTING=1
+      - MYSQL_ROOT_PASSWORD=user
+      - SKIP_UPGRADES=1
+      
+    volumes:
+      - db:/var/lib/mysql
+    networks:
+      - db_network
+    deploy:
+      replicas: 0
       update_config:
         parallelism: 1
-        delay: 10s
+        delay: 30s
         failure_action: rollback
       restart_policy:
         condition: on-failure
         max_attempts: 3
       placement:
         preferences:
-          - spread: node.labels.region
           - spread: node.hostname
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      start_period: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
       interval: 10s
       timeout: 5s
-      retries: 3
-    networks:
-    - db_network
+      retries: 5
+      start_period: 60s
 
   nextcloud:
     image: nextcloud
     restart: always
     # ports:
     #   - 80:80
-    links:
-      - db
     volumes:
       - nextcloud:/var/www/html
     environment:
@@ -49,13 +72,11 @@ services:
       - NEXTCLOUD_ADMIN_USER=user
       - NEXTCLOUD_ADMIN_PASSWORD=pIBRAHIMAassw&*ordrghiudgh54
       - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud.127.0.0.1.nip.io nextcloud
-      - REDIS_HOST=redis       
+      - REDIS_HOST=redis
       - REDIS_HOST_PORT=6379
 
-      
-
     deploy:
-      replicas: 1
+      replicas: 0
       update_config:
         parallelism: 1
         delay: 10s
@@ -87,12 +108,9 @@ services:
       - nextonly_network
       - lb_network
 
-
   onlyoffice:
     image: onlyoffice/documentserver
     restart: always
-    links:
-      - nextcloud
     # ports:
     #   - 8082:80
     environment:
@@ -130,7 +148,7 @@ services:
     networks:
       - nextonly_network
       - lb_network
-  
+
   redis:
     image: redis:alpine
     deploy:
@@ -149,5 +167,6 @@ networks:
 volumes:
   nextcloud:
   db:
+    name: '{{.Service.Name}}-{{.Task.Slot}}-data'
   document_data:
   document_log:
