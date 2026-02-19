@@ -1,0 +1,87 @@
+services:
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    deploy:
+      mode: global
+
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+
+  prometheus:
+    image: prom/prometheus:main-distroless
+
+    command:
+      - '--config.file=/prometheus.yaml'
+
+    configs:
+      - source: prometheus_config
+        target: '/prometheus.yaml'
+
+    ports:
+      - '9090:9090'
+
+  grafana:
+
+    image: grafana/grafana:main-ubuntu
+    deploy:
+      mode: global
+
+  traefik:
+    image: traefik:v3.0
+    # networks:
+    #   - network
+    command:
+      - "--api.insecure=true" # Exposes Traefik's dashboard
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=network"
+      - "--entryPoints.web.address=:80" # Defines an HTTP entryPoint on port 80
+      - "--entryPoints.metrics.address=:8082"
+
+      - "--providers.docker=true"
+
+      # Observability
+      - "--log.level=INFO" # Set the Log Level e.g INFO, DEBUG
+      - "--accesslog=true" # Enable Access Logs
+      - "--metrics.prometheus=true" # Enable Prometheus
+      - "--metrics.prometheus.entryPoint=metrics"
+
+      # Add labels to metrics for routers/services (can increase cardinality)
+      - "--metrics.prometheus.addrouterslabels=true"
+    ports:
+      - "85:80" # Expose Traefik's HTTP entryPoint
+      - "8085:8080" # Expose the Traefik Dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock" # Access Docker API
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+
+        # Placement constraints restrict where Traefik tasks can run.
+        # Running on manager nodes is common for accessing the Swarm API via the socket.
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=PathPrefix(`/dashboard`) || PathPrefix(`/api`)"
+        - "traefik.http.routers.dashboard.entryPoints=web"
+        - "traefik.http.routers.dashboard.service=api@internal"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entryPoints=web"
+
+configs:
+  prometheus_config:
+    file: 'prometheus.yaml'

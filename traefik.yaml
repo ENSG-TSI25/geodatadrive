@@ -1,0 +1,52 @@
+
+api:
+  insecure: true # Exposes Traefik's dashboard
+
+# Observability
+log:
+  level: "INFO"
+
+accesslog: true
+
+entryPoints:
+  web:
+    address: ":80" # Defines an HTTP entryPoint on port 80
+    http:
+      # redirections:
+      #   entryPoint: 
+      #     to: websecure
+      #     scheme: https
+      #     permanent: true
+    
+  # websecure:
+  #   address: ":443"
+    # http:
+    #   tls : {}
+  metrics: 
+    address: ":8082"
+
+providers: 
+  swarm: 
+    endpoint: "unix:///var/run/docker.sock"
+    exposedbydefault: false
+    network: lb_network
+  docker: {}
+
+
+metrics:
+  prometheus: 
+    entryPoint: metrics
+    addrouterslabels: true
+
+# certificatesResolvers:
+#   myresolver:
+#     tls:
+#       storage: tls.json
+#       # httpChallenge:
+#       #   # used during the challenge
+#       #   entryPoint: web
+
+
+
+
+
