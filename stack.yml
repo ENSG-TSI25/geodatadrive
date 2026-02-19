@@ -11,7 +11,7 @@ services:
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
     deploy:
-      replicas: 3
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -35,8 +35,8 @@ services:
   nextcloud:
     image: nextcloud
     restart: always
-    ports:
-      - 80:80
+    # ports:
+    #   - 80:80
     links:
       - db
     volumes:
@@ -48,10 +48,14 @@ services:
       - MYSQL_HOST=db
       - NEXTCLOUD_ADMIN_USER=user
       - NEXTCLOUD_ADMIN_PASSWORD=pIBRAHIMAassw&*ordrghiudgh54
-      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud
+      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud.127.0.0.1.nip.io nextcloud
+      - REDIS_HOST=redis       
+      - REDIS_HOST_PORT=6379
+
+      
 
     deploy:
-      replicas: 6
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -68,7 +72,7 @@ services:
         # Enable Service discovery for Traefik
         - "traefik.enable=true"
         # Define the nextcloud router rule
-        - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.tsic2026.duckdns.org`)"
+        - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.127.0.0.1.nip.io`)"
         # Expose the nextcloud port number to Traefik
         - traefik.http.services.nextcloud.loadbalancer.server.port=80
 
@@ -81,6 +85,7 @@ services:
     networks:
       - db_network
       - nextonly_network
+      - lb_network
 
 
   onlyoffice:
@@ -88,15 +93,15 @@ services:
     restart: always
     links:
       - nextcloud
-    ports:
-      - 8082:80
+    # ports:
+    #   - 8082:80
     environment:
       - JWT_SECRET=secret
     volumes:
       - document_data:/var/www/onlyoffice/Data
       - document_log:/var/log/onlyoffice
     deploy:
-      replicas: 3
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -113,22 +118,33 @@ services:
         # Enable Service discovery for Traefik
         - "traefik.enable=true"
         # Define the onlyoffice router rule
-        - "traefik.http.routers.onlyoffice.rule=Host(`onlyoffice.tsic2026.duckdns.org`)"
+        - "traefik.http.routers.onlyoffice.rule=Host(`onlyoffice.127.0.0.1.nip.io`)"
         # Expose the onlyoffice port number to Traefik
-        - traefik.http.services.onlyoffice.loadbalancer.server.port=8082
+        - traefik.http.services.onlyoffice.loadbalancer.server.port=80
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/"]
+      test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 120s
     networks:
       - nextonly_network
-
+      - lb_network
+  
+  redis:
+    image: redis:alpine
+    deploy:
+      replicas: 1
+    networks:
+      - db_network
 
 networks:
+  lb_network:
+    external: true
   db_network:
+    driver: overlay
   nextonly_network:
+    driver: overlay
 
 volumes:
   nextcloud:
