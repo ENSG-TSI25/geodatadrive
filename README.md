@@ -41,5 +41,36 @@ https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dns_sd
 https://prometheus.io/docs/guides/node-exporter/
 
 https://prometheus.io/docs/prometheus/latest/getting_started/
+
 ```
 
+## grafana :
+id : admin
+mdp : admin
+
+Une fois sur grafana on doit ajouter la connection prometheus.
+
+* l'id du module pour le dashboard Prometheus sur grafana 1860
+[lien](https://grafana.com/grafana/dashboards/1860-node-exporter-full/)
+
+On cree le dashboard avec prometheus.
+
+
+## NextCloud
+* 11033
+### Configuration Trusted_Domains pour nextcloud
+
+On a mis  le nexcloud dans le fichier config/config.php de nextcloud
+
+
+
+### mariadb
+ L'id du dashboard de mariadb 14621
+    - MYSQL_ROOT_PASSWORD=root
+    - MYSQL_PASSWORD=user
+    - MYSQL_DATABASE=nextcloud
+    - MYSQL_USER=nextcloud
+
+
+
+### cAdvisor depends on redis

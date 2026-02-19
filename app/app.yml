@@ -1,0 +1,162 @@
+services:
+  db:
+    image: mariadb:10.6
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+    # à modifier avec root 
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_PASSWORD=user
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        preferences:
+          - spread: node.labels.region
+          - spread: node.hostname
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+    - db_network
+    - monitoring
+    - lb_network
+
+
+  nextcloud:
+    image: nextcloud
+    restart: always
+    # ports:
+    #   - 80:80
+    links:
+      - db
+    volumes:
+      - nextcloud:/var/www/html
+    environment:
+      - MYSQL_PASSWORD=user
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
+      - NEXTCLOUD_ADMIN_USER=user
+      - NEXTCLOUD_ADMIN_PASSWORD=pIBRAHIMAassw&*ordrghiudgh54
+      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud.127.0.0.1.nip.io nextcloud
+      - REDIS_HOST=redis       
+      - REDIS_HOST_PORT=6379
+
+      
+
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        preferences:
+          - spread: node.labels.region
+          - spread: node.hostname
+
+      labels:
+        # Enable Service discovery for Traefik
+        - "traefik.enable=true"
+        # Define the nextcloud router rule
+        - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.127.0.0.1.nip.io`)"
+        # Expose the nextcloud port number to Traefik
+        - traefik.http.services.nextcloud.loadbalancer.server.port=80
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - db_network
+      - nextonly_network
+      - lb_network
+      - monitoring
+
+
+  onlyoffice:
+    image: onlyoffice/documentserver
+    restart: always
+    links:
+      - nextcloud
+    # ports:
+    #   - 8082:80
+    environment:
+      - JWT_SECRET=secret
+    volumes:
+      - document_data:/var/www/onlyoffice/Data
+      - document_log:/var/log/onlyoffice
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        preferences:
+          - spread: node.labels.region
+          - spread: node.hostname
+
+      labels:
+        # Enable Service discovery for Traefik
+        - "traefik.enable=true"
+        # Define the onlyoffice router rule
+        - "traefik.http.routers.onlyoffice.rule=Host(`onlyoffice.127.0.0.1.nip.io`)"
+        # Expose the onlyoffice port number to Traefik
+        - traefik.http.services.onlyoffice.loadbalancer.server.port=80
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - nextonly_network
+      - lb_network
+      - monitoring
+  
+  redis:
+    image: redis:alpine
+    deploy:
+      replicas: 1
+    networks:
+      - db_network
+
+networks:
+  lb_network:
+    external: true
+  db_network:
+    driver: overlay
+  nextonly_network:
+    driver: overlay
+  # network à ajouter 
+  monitoring:
+
+volumes:
+  nextcloud:
+  db:
+  document_data:
+  document_log:
+
