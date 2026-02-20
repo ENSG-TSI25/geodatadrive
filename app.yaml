@@ -16,7 +16,7 @@ services:
       - db_network
       - lb_loadbalancer
     deploy:
-      replicas: 0
+      replicas: 1
       placement:
         constraints:
           - node.role == manager
@@ -41,7 +41,7 @@ services:
       - db_network
       - lb_loadbalancer
     deploy:
-      replicas: 3
+      replicas: 0
       update_config:
         parallelism: 1
         delay: 30s
@@ -80,7 +80,7 @@ services:
       - REDIS_HOST_PORT=6379
 
     deploy:
-      replicas: 1
+      replicas: 0
       update_config:
         parallelism: 1
         delay: 10s
