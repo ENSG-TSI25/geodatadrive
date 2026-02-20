@@ -1,0 +1,41 @@
+services:
+
+
+  traefik:
+    image: traefik:v3
+    networks:
+      - loadbalancer
+    ports:
+      - "80:80" # Expose Traefik's HTTP entryPoint
+      - "443:443"
+
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock" # Access Docker API
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+
+        # Placement constraints restrict where Traefik tasks can run.
+        # Running on manager nodes is common for accessing the Swarm API via the socket.
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=Host(`lb.tsic2026.duckdns.org`)"
+        - "traefik.http.routers.dashboard.service=api@internal"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+    configs:
+      - source: traefik_config_11h46
+        target: '/traefik.yaml'
+
+configs:
+  # prometheus_config:
+  #   file: 'prometheus.yaml'
+  traefik_config_11h46:
+    file: 'traefik.yaml'
+
+networks:
+  loadbalancer:
+    driver: overlay
+    attachable: true
